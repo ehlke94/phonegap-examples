@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2012-2016 Adobe Systems Incorporated. All rights reserved.
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+    <!-- This is a wide open CSP declaration. To lock this down for production, see below. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *" />
+    <!-- Good default declaration:
+    * gap: is required only on iOS (when using UIWebView) and is needed for JS->native communication
+    * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
+    * Disables use of eval() and inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
+        * Enable inline JS: add 'unsafe-inline' to default-src
+        * Enable eval(): add 'unsafe-eval' to default-src
+    * Create your own at http://cspisawesome.com
+    -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: 'unsafe-inline' https://ssl.gstatic.com; style-src 'self' 'unsafe-inline'; media-src *" /> -->
+
+    <title>Hello World</title>
+</head>
+
+<body>
+
+    <ul id="lista"></ul>
+
+    <h1>Network Information</h1>
+    <div id="network"></div>
+
+    <h1>Device Information</h1>
+    <div id="device"></div>
+
+    <h1>Location Information</h1>
+    <div id="result" style="color:red; font-size: 30px;"></div>
+
+    <h1>Battery</h1>
+    <div id="battery"></div>
+
+    <script src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript">
+        document.addEventListener('deviceready', onDeviceReady, false);
+
+        var i = 0;
+
+        function onSuccess(acceleration) {
+            alert('Acceleration X: ' + acceleration.x + '\n' +
+                  'Acceleration Y: ' + acceleration.y + '\n' +
+                  'Acceleration Z: ' + acceleration.z + '\n' +
+                  'Timestamp: '      + acceleration.timestamp + '\n');
+        }
+
+        function getLocation(position){
+            getJSON('http://maps.googleapis.com/maps/api/geocode/json?latlng=' + position.coords.latitude + ',' + position.coords.longitude + '&sensor=true').then(function(data) {
+
+                result.innerText = data.results[1].formatted_address;
+            }, function(status) { 
+              alert('Something went wrong.');
+            });
+
+            /*alert('Latitude: '          + position.coords.latitude          + '\n' +
+                  'Longitude: '         + position.coords.longitude         + '\n' +
+                  'Altitude: '          + position.coords.altitude          + '\n' +
+                  'Accuracy: '          + position.coords.accuracy          + '\n' +
+                  'Altitude Accuracy: ' + position.coords.altitudeAccuracy  + '\n' +
+                  'Heading: '           + position.coords.heading           + '\n' +
+                  'Speed: '             + position.coords.speed             + '\n' +
+                  'Timestamp: '         + position.timestamp                + '\n');*/
+        }
+
+        var getJSON = function(url) {
+          return new Promise(function(resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('get', url, true);
+            xhr.responseType = 'json';
+            xhr.onload = function() {
+              var status = xhr.status;
+              if (status == 200) {
+                resolve(xhr.response);
+              } else {
+                reject(status);
+              }
+            };
+            xhr.send();
+          });
+        };
+
+
+        function onError() {
+            alert('onError!');
+        }
+
+        var btInserir = function(){
+            var li = document.createElement("li");
+            li.innerHTML = (i++) + " - " + document.getElementById("item").value;
+            document.getElementById("lista").appendChild(li);
+            navigator.accelerometer.getCurrentAcceleration(onSuccess, onError);
+        }
+
+        function onDeviceReady(){
+            //alert("Oi Phonegap!");
+            console.log(navigator.accelerometer);
+            //document.getElementById("btnInc").onclick = btInserir;
+            checkConnection();
+            getInformation();
+            //getLocation();
+            navigator.geolocation.getCurrentPosition(getLocation, onError);
+
+            window.addEventListener("batterystatus", getBattery, false);
+        }
+
+        function getBattery(status){
+            var p = document.createElement("p");
+            p.innerHTML = "Level: " + status.level + " isPlugged: " + status.isPlugged; 
+            document.getElementById("battery").appendChild(p);
+        }
+
+        function getInformation() {
+            var model = device.model;
+            var plataforma = device.platform;
+            var version = device.version;
+            var cordova = device.cordova;
+            var uuid = device.uuid;
+            var manufacturer = device.manufacturer;
+            var isVirtual = device.isVirtual;
+            var serial = device.serial;
+
+            var p = document.createElement("p");
+            p.innerHTML = 'Model: ' + model + ' <br> Plataform: ' + plataforma + '<br> Version: ' + version + '<br> Cordova: ' + cordova + '<br> UUID: ' + uuid + "<br>Manufacturer: " + manufacturer + "<br> isVirtual: " + isVirtual + "<br> Serial:" + serial;
+            document.getElementById("device").appendChild(p);
+        }
+
+        function checkConnection() {
+            var networkState = navigator.connection.type;
+
+            var states = {};
+            states[Connection.UNKNOWN]  = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI]     = 'WiFi connection';
+            states[Connection.CELL_2G]  = 'Cell 2G connection';
+            states[Connection.CELL_3G]  = 'Cell 3G connection';
+            states[Connection.CELL_4G]  = 'Cell 4G connection';
+            states[Connection.CELL]     = 'Cell generic connection';
+            states[Connection.NONE]     = 'No network connection';
+
+            var p = document.createElement("p");
+            p.innerHTML = 'Connection type: ' + states[networkState];
+            document.getElementById("network").appendChild(p);
+        }
+    </script>
+</body>
+
+</html>
